@@ -317,7 +317,7 @@ class GoogleSheetsRepository:
     
     def get_object_inventory_summary(self, oid: str) -> dict:
         try:
-            chiqim_ws = self.sheet.worksheet("Chiqim")
+            chiqim_ws = self.sheet.worksheet("OmborData")
             data = chiqim_ws.get_all_values()
         except Exception as e:
             return {}
@@ -330,7 +330,7 @@ class GoogleSheetsRepository:
                     oqim = row[ChiqimCols.OQIM_TURI].strip().lower()
                     
                     soni, kvm = self._parse_float(row[ChiqimCols.SONI]), self._parse_float(row[ChiqimCols.KVM])
-                    if oqim == 'qaytdi':
+                    if oqim == 'qaytdim':
                         soni, kvm = -soni, -kvm
                         
                     if mahsulot not in inventory:
