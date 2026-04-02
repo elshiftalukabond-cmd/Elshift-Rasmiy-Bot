@@ -32,9 +32,6 @@ class AuthState(StatesGroup):
 class WakeState(StatesGroup):
     waiting_for_report = State()
 
-# ==========================================
-# 1. OMMAVIY QISM VA MIJOZ KIRISHI
-# ==========================================
 @router.message(Command("start"))
 async def cmd_public_start(message: Message, state: FSMContext):
     await state.clear()
@@ -67,7 +64,6 @@ async def contact_info_handler(message: Message):
 async def vacancies_handler(message: Message):
     await message.answer("💼 Hozirgi vaqtda ochiq vakansiyalar mavjud emas. Yangiliklarni kuzatib boring!", parse_mode="HTML")
 
-# --- MIJOZ AVTORIZATSIYASI ---
 @router.message(F.text == "🤝 Mijozlar bo'limi")
 async def cmd_client_login(message: Message, state: FSMContext):
     await state.clear()
@@ -82,27 +78,22 @@ async def handle_client_contact(message: Message, state: FSMContext):
     raw_phone = message.contact.phone_number
     telegram_id = message.from_user.id
     
-    # Raqamni faqat raqamlardan iborat holatga keltirish va oxirgi 9 tasini olish
     digits_only = "".join(filter(str.isdigit, str(raw_phone)))
     clean_phone_9 = digits_only[-9:] if len(digits_only) >= 9 else digits_only
     
-    # Adminga jo'natish uchun qulay format (+998...)
     admin_phone_format = f"+998{clean_phone_9}"
     
     status_msg = await message.answer("Baza tekshirilmoqda... ⏳", reply_markup=ReplyKeyboardRemove())
     client = await asyncio.to_thread(repo.auth_client, raw_phone, telegram_id)
     await status_msg.delete()
     
-    # YANGI MIJOZNI TEKSHIRISH VA ADMINGA YUBORISH
     if client.tg_status == "Topilmadi":
         full_name = message.from_user.full_name
         username = message.from_user.username or "yo'q"
         now_str = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
         
-        # 1. Yangi mijozni jadvalga saqlash (FAQAT 9 xonali raqam bilan)
         await asyncio.to_thread(repo.save_new_client_attempt, str(telegram_id), clean_phone_9, full_name, username, now_str)
         
-        # 2. Barcha adminlarga xabar yuborish (+998 FORMATIDA)
         admin_ids = await asyncio.to_thread(repo.get_all_admins_tg_ids)
         alert_text = (
             f"🚨 <b>DIQQAT: Yangi mijoz urinishi!</b>\n\n"
@@ -118,7 +109,7 @@ async def handle_client_contact(message: Message, state: FSMContext):
             except Exception:
                 pass 
 
-        # 3. Mijozga maxsus xabarni yuborish
+    
         if NEW_CLIENT_INFO_MSG_ID:
             try:
                 await message.bot.copy_message(chat_id=telegram_id, from_chat_id=LOGIST_GROUP_ID, message_id=NEW_CLIENT_INFO_MSG_ID, reply_markup=get_main_public_menu())
@@ -154,9 +145,6 @@ async def handle_client_contact(message: Message, state: FSMContext):
         await message.answer(f"⏳ Statusingiz: {client.tg_status}. Admin tasdiqlashini kuting.", reply_markup=get_main_public_menu())
 
 
-# ==========================================
-# 2. XODIMLAR (LOGIST VA ADMIN) AVTORIZATSIYASI
-# ==========================================
 @router.message(Command("elshift_logist"))
 async def cmd_logist_start(message: Message, state: FSMContext):
     await state.clear()
@@ -215,9 +203,6 @@ async def handle_admin_contact(message: Message, state: FSMContext):
     else:
         await message.answer(f"⏳ Statusingiz: {employee.tg_status}.", reply_markup=get_main_public_menu())
 
-# ==========================================
-# 3. ASOSIY MENYULAR VA ADMIN FUNKSIYALARI
-# ==========================================
 @router.message(F.text == "🚪 Tizimdan chiqish")
 async def exit_system(message: Message, state: FSMContext):
     await state.clear()
@@ -236,7 +221,6 @@ async def back_to_main_menu(message: Message, state: FSMContext):
         await state.clear()
         await message.answer("Asosiy menyuga qaytdingiz.", reply_markup=get_main_public_menu())
 
-# --- ADMIN: YANGILASH (Oxirgi 2 kunlik mijozlar) ---
 @router.message(F.text == "🔄 Yangilash")
 async def admin_refresh_handler(message: Message, state: FSMContext):
     data = await state.get_data()
@@ -256,7 +240,6 @@ async def admin_refresh_handler(message: Message, state: FSMContext):
         
     await message.answer(text, parse_mode="HTML", reply_markup=get_admin_main_menu())
 
-# --- LOGIST VA MIJOZ OBYEKTLAR ---
 @router.message(F.text == "🏢 Obyektlar")
 @router.message(F.text == "🔙 Obyektlar ro'yxatiga")
 async def show_objects_handler(message: Message, state: FSMContext):
@@ -287,9 +270,6 @@ async def show_objects_handler(message: Message, state: FSMContext):
         await message.answer("🏢 <b>Qaysi obyekt bo'yicha ma'lumot ko'rmoqchisiz?</b>", parse_mode="HTML", reply_markup=get_client_objects_reply_keyboard(projects))
 
 
-# ==========================================
-# 4. YETKAZIB BERISH JARAYONI (LOGIST FSM)
-# ==========================================
 @router.message(F.text == "✅ Mahsulot yetkazildi")
 async def start_delivery_process(message: Message, state: FSMContext):
     data = await state.get_data()
@@ -360,9 +340,6 @@ async def cancel_delivery_handler(callback: CallbackQuery):
     await callback.message.answer("❌ Bekor qilindi.", reply_markup=get_object_action_reply_keyboard())
     await callback.answer()
 
-# ==========================================
-# 5. ARXIV (RASM+CAPTION VA VIDEO)
-# ==========================================
 @router.message(F.text == "📦 Avval yetkazilganlar")
 @router.message(F.text == "📦 Yetkazilgan mahsulotlar")
 async def show_previous_deliveries(message: Message, state: FSMContext):
@@ -425,10 +402,6 @@ async def show_previous_deliveries(message: Message, state: FSMContext):
     if not deliveries:
         await message.answer("🤷‍♂️ Bu obyekt bo'yicha hali rasm yoki videoli yetkazish tarixi mavjud emas.")
 
-
-# ==========================================
-# 6. OBYEKT HISOBOTI (FAQAT MIJOZ)
-# ==========================================
 @router.message(F.text == "📊 Obyekt hisoboti")
 async def client_object_report(message: Message, state: FSMContext):
     data = await state.get_data()
@@ -484,20 +457,17 @@ async def client_object_report(message: Message, state: FSMContext):
         await message.answer("Hozirda obyektga yetkazilgan mahsulotlar bo'yicha ma'lumot yo'q.", reply_markup=get_client_object_action_reply_keyboard())
 
 
-# ==========================================
-# 7. WAKE: XODIM JAVOBINI QABUL QILISH VA ADMINGA YUBORISH
-# ==========================================
 @router.callback_query(F.data.startswith("wake_"))
-async def handle_wake_response(callback: CallbackQuery, state: FSMContext): # state qo'shildi
+async def handle_wake_response(callback: CallbackQuery, state: FSMContext):
     parts = callback.data.split("_")
     if len(parts) < 3: return
     
-    answer = parts[1] # "yes" yoki "no"
+    answer = parts[1]
     time_str = parts[2]
     name = callback.from_user.full_name
         
     if answer == "yes":
-        # HA desa: Ma'lumotlarni vaqtinchalik saqlaymiz va xodimdan matn kutamiz
+        
         await state.update_data(wake_time=time_str, wake_name=name)
         await state.set_state(WakeState.waiting_for_report)
         
@@ -508,7 +478,7 @@ async def handle_wake_response(callback: CallbackQuery, state: FSMContext): # st
         await callback.answer()
         
     else:
-        # YO'Q desa: Hech narsa kutmaymiz, srazi adminga yuboramiz
+
         user_reply_text = "❌ YO'Q (Hech narsa yo'q)"
         await callback.message.edit_text(f"{callback.message.html_text}\n\n<b>Sizning javobingiz:</b> {user_reply_text}", parse_mode="HTML")
         
@@ -525,20 +495,17 @@ async def handle_wake_response(callback: CallbackQuery, state: FSMContext): # st
                 
         await callback.answer("Javobingiz adminga yuborildi. Rahmat!", show_alert=True)
 
-# --- XODIM YUBORGAN BATAFSIL MATNNI USHLAB OLISH VA ADMINGA YUBORISH ---
 @router.message(WakeState.waiting_for_report, F.text)
 async def process_wake_report(message: Message, state: FSMContext):
     data = await state.get_data()
     time_str = data.get("wake_time", "Noma'lum")
     name = data.get("wake_name", message.from_user.full_name)
     report_msg = message.text
-    
-    # Kutish rejimini o'chiramiz (lekin profilidan chiqib ketmasligi uchun None qilamiz)
+
     await state.set_state(None)
     
     await message.answer("✅ Batafsil hisobotingiz qabul qilindi va adminga yuborildi. Rahmat!")
     
-    # Adminga to'liq hisobotni yuborish
     admin_ids = await asyncio.to_thread(repo.get_all_admins_tg_ids)
     report_text = (
         f"📩 <b>WAKE BATAFSIL HISOBOTI:</b>\n\n"
@@ -552,10 +519,6 @@ async def process_wake_report(message: Message, state: FSMContext):
         try: await message.bot.send_message(chat_id=adm, text=report_text, parse_mode="HTML")
         except Exception: pass
 
-
-# ==========================================
-# 8. GLOBAL FALLBACK (MATNDAN ID TOPISH)
-# ==========================================
 @router.message()
 async def select_object_by_clean_reply(message: Message, state: FSMContext):
     data = await state.get_data()

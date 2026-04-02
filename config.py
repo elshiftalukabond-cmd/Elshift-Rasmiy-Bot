@@ -19,7 +19,7 @@ try:
     LOGIST_GROUP_ID = int(os.getenv("LOGIST_GROUP_ID", 0))
     ABOUT_US_MSG_ID = int(os.getenv("ABOUT_US_MSG_ID", 0))
     CONTACT_MSG_ID = int(os.getenv("CONTACT_MSG_ID", 0))
-    NEW_CLIENT_INFO_MSG_ID = int(os.getenv("NEW_CLIENT_INFO_MSG_ID", 0)) # YANGI QO'SHILDI
+    NEW_CLIENT_INFO_MSG_ID = int(os.getenv("NEW_CLIENT_INFO_MSG_ID", 0))
 except ValueError:
     LOGIST_GROUP_ID = 0
     ABOUT_US_MSG_ID = 0
@@ -38,7 +38,6 @@ try:
 except ValueError:
     LOGIST_GROUP_ID = ABOUT_US_MSG_ID = CONTACT_MSG_ID = NEW_CLIENT_INFO_MSG_ID = 0
 
-# --- WAKE SOZLAMALARI (FAQAT VAQTLAR) ---
 WAKE_SCHEDULE_TIMES = os.getenv("WAKE_SCHEDULE_TIMES", "09:00,14:00,16:00").split(",")
 
 if not all([BOT_TOKEN, GOOGLE_CREDENTIALS_JSON_PATH]) or LOGIST_GROUP_ID == 0:

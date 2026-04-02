@@ -1,6 +1,5 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
-# --- OMMAVIY MENYU TUGMALARI ---
 def get_main_public_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
@@ -17,7 +16,6 @@ def get_contact_keyboard() -> ReplyKeyboardMarkup:
         one_time_keyboard=True
     )
 
-# --- LOGIST KLAVIATURALARI ---
 def get_logist_main_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
@@ -60,13 +58,12 @@ def get_confirm_delivery_keyboard() -> InlineKeyboardMarkup:
         ]
     )
 
-# --- MIJOZ KLAVIATURALARI ---
 def get_client_objects_reply_keyboard(objects_list: list) -> ReplyKeyboardMarkup:
     buttons = []
     for i in range(0, len(objects_list), 2):
         row = [KeyboardButton(text=f"{obj.name}") for obj in objects_list[i:i+2]]
         buttons.append(row)
-    # Chiqish tugmasi eng pastga qo'shildi
+
     buttons.append([KeyboardButton(text="🚪 Tizimdan chiqish")])
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
@@ -79,7 +76,6 @@ def get_client_object_action_reply_keyboard() -> ReplyKeyboardMarkup:
         resize_keyboard=True
     )
 
-# --- ADMIN KLAVIATURALARI ---
 def get_admin_main_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
@@ -89,9 +85,6 @@ def get_admin_main_menu() -> ReplyKeyboardMarkup:
         resize_keyboard=True
     )
 
-# ==================================================
-# --- WAKE (ESLATMA) INLINE KLAVIATURASI (YANGI) ---
-# ==================================================
 def get_wake_confirm_keyboard(time_str: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[

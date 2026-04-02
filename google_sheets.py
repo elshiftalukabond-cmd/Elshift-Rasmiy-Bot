@@ -16,7 +16,6 @@ class EmployeeCols:
     LAVOZIM = 10    
     TG_LAVOZIM = 11 
     FULLNAME = 14
-    # SIZNING JADVALINGIZGA MOSLASHTIRILDI (15-indeks = Timer ustuni)
     WAKE_STATUS = 15  
 
 class ClientCols:
@@ -80,7 +79,6 @@ class GoogleSheetsRepository:
         except ValueError:
             return 0.0
 
-    # --- XODIM AUTH (LOGIST VA ADMIN) ---
     def auth_employee(self, phone: str, telegram_id: int, expected_role: str = "logist") -> EmployeeModel:
         phone_clean = self._clean_phone(phone)
         data = self.xodimlar_ws.get_all_values()
@@ -125,7 +123,6 @@ class GoogleSheetsRepository:
                     )
         return EmployeeModel("", str(telegram_id), "Topilmadi", "", "", "", "")
 
-    # --- ADMINLAR ID RO'YXATINI OLISH ---
     def get_all_admins_tg_ids(self) -> List[int]:
         data = self.xodimlar_ws.get_all_values()
         admin_ids = []
@@ -139,9 +136,6 @@ class GoogleSheetsRepository:
                     admin_ids.append(int(tg_id))
         return admin_ids
 
-    # ==========================================
-    # YANGI WAKE FUNKSIYASI (LAVOZIMGA QARAMAYDI)
-    # ==========================================
     def get_wake_employees(self) -> List[dict]:
         """Timer ustunida 'wake' so'zi bor va tasdiqlangan barcha xodimlarni topish"""
         try:
@@ -151,17 +145,14 @@ class GoogleSheetsRepository:
             return []
             
         wake_users = []
-        # Qator raqamiga qaramaydi, butun jadvalni tekshiradi
+        
         for row in data:
-            # Agar qator yetarlicha uzun bo'lsa
+            
             if len(row) > EmployeeCols.WAKE_STATUS:
                 tg_id = row[EmployeeCols.TG_ID].strip()
                 tg_status = row[EmployeeCols.TG_STATUS].strip().lower()
                 wake_status = row[EmployeeCols.WAKE_STATUS].strip().lower()
                 
-                # 1. Telegram ID raqamdan iborat bo'lishi kerak (ulangan bo'lsa)
-                # 2. Xodim bloklanmagan ("tasdiqlandi") bo'lishi kerak
-                # 3. Timer ustunida "wake" bo'lishi kerak (lavozimi nima bo'lsa ham)
                 if tg_id.isdigit() and tg_status == "tasdiqlandi" and wake_status == "wake":
                     wake_users.append({
                         "tg_id": int(tg_id),
@@ -169,7 +160,6 @@ class GoogleSheetsRepository:
                     })
         return wake_users
 
-    # --- MIJOZ AUTH ---
     def auth_client(self, phone: str, telegram_id: int) -> ClientModel:
         phone_clean = self._clean_phone(phone)
         data = self.mijozlar_ws.get_all_values()
@@ -206,7 +196,6 @@ class GoogleSheetsRepository:
                     return ClientModel(cid, name, phone_clean, str(telegram_id), tg_status)
         return ClientModel("", "", "", str(telegram_id), "Topilmadi")
 
-    # --- YANGI MIJOZNI SAQLASH VA O'QISH ---
     def save_new_client_attempt(self, tg_id: str, phone: str, full_name: str, username: str, date_time: str):
         try:
             self.yangi_mijoz_ws.append_row([tg_id, phone, full_name, username, date_time])

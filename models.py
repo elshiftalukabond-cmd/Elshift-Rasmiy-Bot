@@ -32,7 +32,7 @@ class LogistProjectModel:
     yakuniy_summa: str = ""
     tolandi: str = ""
     qarzdorlik: str = ""
-    ustalar: list = field(default_factory=list) # YANGI QO'SHILDI
+    ustalar: list = field(default_factory=list)
 
     def format_money(self, amount: str) -> str:
         """Summalarni o'qishga qulay formatga o'tkazadi (Masalan: 1 500 000 so'm)"""

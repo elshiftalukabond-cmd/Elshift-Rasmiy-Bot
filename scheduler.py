@@ -25,7 +25,7 @@ async def job_wake_request(bot: Bot, time_str: str):
         await send_wake_to_user(bot, u['tg_id'], u['full_name'], time_str)
 
 def setup_scheduler(scheduler: AsyncIOScheduler, bot: Bot):
-    # .env dagi belgilangan vaqtlar uchun jadvallarni tuzamiz
+
     for time_str in WAKE_SCHEDULE_TIMES:
         time_str = time_str.strip()
         if ":" in time_str:
