@@ -1,9 +1,11 @@
 import gspread
 import logging
+import json
+import os
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from google.oauth2.service_account import Credentials
-from config import GOOGLE_CREDENTIALS_JSON_PATH, SHEET_NAME
+from config import GOOGLE_CREDENTIALS_JSON, SHEET_NAME
 from models import EmployeeModel, LogistProjectModel, ClientModel
 
 logger = logging.getLogger(__name__)
@@ -55,7 +57,15 @@ class GoogleSheetsRepository:
         logger.info("[REPO] Google API ga ulanmoqda...")
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         try:
-            creds = Credentials.from_service_account_file(GOOGLE_CREDENTIALS_JSON_PATH, scopes=scopes)
+            # Matn (Railway) yoki Fayl (Lokal) ekanligini tekshiramiz
+            if GOOGLE_CREDENTIALS_JSON and GOOGLE_CREDENTIALS_JSON.strip().startswith('{'):
+                # Railway uchun: JSON matnidan o'qish
+                creds_dict = json.loads(GOOGLE_CREDENTIALS_JSON)
+                creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+            else:
+                # Kompyuter uchun: Fayldan o'qish
+                creds = Credentials.from_service_account_file(GOOGLE_CREDENTIALS_JSON, scopes=scopes)
+            
             self.client = gspread.authorize(creds)
             self.sheet = self.client.open(SHEET_NAME)
             
@@ -137,7 +147,6 @@ class GoogleSheetsRepository:
         return admin_ids
 
     def get_wake_employees(self) -> List[dict]:
-        """Timer ustunida 'wake' so'zi bor va tasdiqlangan barcha xodimlarni topish"""
         try:
             data = self.xodimlar_ws.get_all_values()
         except Exception as e:
@@ -147,7 +156,6 @@ class GoogleSheetsRepository:
         wake_users = []
         
         for row in data:
-            
             if len(row) > EmployeeCols.WAKE_STATUS:
                 tg_id = row[EmployeeCols.TG_ID].strip()
                 tg_status = row[EmployeeCols.TG_STATUS].strip().lower()
@@ -229,7 +237,6 @@ class GoogleSheetsRepository:
         
         return recent_clients
 
-    # --- OBYEKTLAR VA ARXIV ---
     def get_active_objects(self) -> List[LogistProjectModel]:
         data = self.obyektlar_ws.get_all_values()
         active_projects = {}
