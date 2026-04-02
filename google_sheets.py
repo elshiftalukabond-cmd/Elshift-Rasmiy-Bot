@@ -43,14 +43,14 @@ class ObjectCols:
     USTA_NOMI = 32  
 
 class ChiqimCols:
-    SANA = 0
-    OMBOR = 1
-    MAHSULOT = 2
-    TURI = 3
-    SONI = 4
-    KVM = 5
-    KONTRA = 9    
-    OQIM_TURI = 10 
+    SANA = 1          # "Sana" ustuni
+    OMBOR = 2         # "Ombor" ustuni
+    MAHSULOT = 4      # "Mahsulot" ustuni
+    TURI = 5          # "Turi" ustuni
+    SONI = 6          # "Soni" ustuni
+    KVM = 7           # "Kv.m" ustuni
+    KONTRA = 11       # "Kontragent" ustuni
+    OQIM_TURI = 12    # "Oqim Turi" ustuni
 
 class GoogleSheetsRepository:
     def __init__(self):
@@ -330,7 +330,7 @@ class GoogleSheetsRepository:
                     oqim = row[ChiqimCols.OQIM_TURI].strip().lower()
                     
                     soni, kvm = self._parse_float(row[ChiqimCols.SONI]), self._parse_float(row[ChiqimCols.KVM])
-                    if oqim == 'qaytdim':
+                    if oqim == 'qaytim':
                         soni, kvm = -soni, -kvm
                         
                     if mahsulot not in inventory:
