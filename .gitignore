@@ -1,0 +1,14 @@
+# Maxfiy ma'lumotlar
+.env
+elshift-telegram-scheduler.json
+
+# Virtual muhit
+venv/
+env/
+
+# IDE sozlamalari
+.idea/
+
+# Python kesh fayllari
+__pycache__/
+*.pyc
