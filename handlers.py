@@ -392,7 +392,7 @@ async def show_previous_deliveries(message: Message, state: FSMContext):
     if role == "logist" and inventory:
         aluk_soni = 0.0
         aluk_kvm = 0.0
-        turi_totallar = {}
+        groups = {"Alukabondlar": []}
         
         for m, h in inventory.items():
             turi = h.get('turi', '').strip()
@@ -404,12 +404,15 @@ async def show_previous_deliveries(message: Message, state: FSMContext):
                 h['is_aluk'] = True
                 aluk_soni += s
                 aluk_kvm += k
+                if round(s, 2) > 0 or round(k, 2) > 0:
+                    groups["Alukabondlar"].append((m, h))
             else:
                 h['is_aluk'] = False
-                t_key = turi if turi else "Dona"
-                if t_key not in turi_totallar:
-                    turi_totallar[t_key] = 0.0
-                turi_totallar[t_key] += s
+                if round(s, 2) > 0 or round(k, 2) > 0:
+                    cat = turi.capitalize() if turi else "Boshqalar"
+                    if cat not in groups:
+                        groups[cat] = []
+                    groups[cat].append((m, h))
 
         def fmt_total(s, k):
             s_str = f"{s:g} dona" if s > 0 else ""
@@ -419,28 +422,37 @@ async def show_previous_deliveries(message: Message, state: FSMContext):
         summary_text = f"📊 <b>MAHSULOTLAR BALANSI:</b>\n"
         if aluk_soni > 0 or aluk_kvm > 0:
             summary_text += f"🟦 <b>Jami Alukabondlar:</b> {fmt_total(aluk_soni, aluk_kvm)}\n"
-        
-        for t_name, amount in turi_totallar.items():
-            if amount > 0:
-                summary_text += f"🟨 <b>Jami {t_name.capitalize()}:</b> {amount:g} {t_name.lower()}\n"
         summary_text += "\n"
         
-        count = 1
-        for mahsulot, h in inventory.items():
-            if round(h['soni'], 2) > 0 or round(h['kvm'], 2) > 0:
-                if h.get('is_aluk'):
-                    info = fmt_total(h['soni'], h['kvm'])
-                else:
-                    t_unit = h.get('turi', '').strip().lower()
-                    if not t_unit: t_unit = "dona"
-                    info = f"{h['soni']:g} {t_unit}"
-                    if round(h['kvm'], 2) > 0:
-                        info += f" / {h['kvm']:g} kv.m"
-                        
-                summary_text += f"<b>{count}. {mahsulot}</b> — <i>{info}</i>\n"
-                count += 1
-        if count == 1: summary_text += "Barcha mahsulotlar nolga teng."
-        await message.answer(summary_text, parse_mode="HTML")
+        is_empty = True
+        
+        if groups["Alukabondlar"]:
+            summary_text += f"🔹 <b>Alukabondlar:</b>\n"
+            for idx, (m, h) in enumerate(groups["Alukabondlar"], 1):
+                info = fmt_total(h['soni'], h['kvm'])
+                summary_text += f"  <b>{idx}.</b> {m} — <i>{info}</i>\n"
+            summary_text += "\n"
+            is_empty = False
+            
+        for cat, items in groups.items():
+            if cat == "Alukabondlar": continue
+            if not items: continue
+            
+            summary_text += f"🔸 <b>{cat}:</b>\n"
+            for idx, (m, h) in enumerate(items, 1):
+                t_unit = h.get('turi', '').strip().lower()
+                if not t_unit: t_unit = "dona"
+                info = f"{h['soni']:g} {t_unit}"
+                if round(h['kvm'], 2) > 0:
+                    info += f" / {h['kvm']:g} kv.m"
+                summary_text += f"  <b>{idx}.</b> {m} — <i>{info}</i>\n"
+            summary_text += "\n"
+            is_empty = False
+            
+        if is_empty:
+            summary_text += "Barcha mahsulotlar nolga teng."
+            
+        await message.answer(summary_text.strip(), parse_mode="HTML")
     
     if not deliveries:
         await message.answer("🤷‍♂️ Bu obyekt bo'yicha hali rasm yoki videoli yetkazish tarixi mavjud emas.")
@@ -478,7 +490,25 @@ async def client_object_report(message: Message, state: FSMContext):
     total_kvm_str = f"{total_kvm:g} kv.m" if total_kvm > 0 else ""
     total_str = " / ".join(filter(None, [total_soni_str, total_kvm_str])) or "0 dona"
 
-    report_text = f"🏢 <b>Obyekt:</b> {project.name}\n"
+    if project.ustalar:
+        ustalar_str = "\n" + "\n".join([f"  ▫️ {u}" for u in project.ustalar])
+    else:
+        ustalar_str = " Kiritilmagan"
+
+    report_text = (
+        f"🏢 <b>Nomi:</b> {project.name}\n"
+        f"👤 <b>Mijoz:</b> {project.client_name}\n"
+        f"📍 <b>Hudud:</b> {project.hudud}\n"
+        f"📅 <b>Boshlanish sanasi:</b> {project.start_date}\n"
+        f"📊 <b>Status:</b> {project.status}\n\n"
+        f"💰 <b>Summa:</b> {project.format_money(project.yakuniy_summa)}\n"
+        f"💵 <b>To'landi:</b> {project.format_money(project.tolandi)}\n"
+        f"📉 <b>Qarzdorlik:</b> {project.format_money(project.qarzdorlik)}\n\n"
+        f"👷‍♂️ <b>Brigadir:</b> {project.brigadir}\n"
+        f"🛠 <b>Ustalar:</b>{ustalar_str}\n\n"
+        f"<i>📦 Obyektga yetkazilgan jami mahsulotlar balansi:</i>\n\n"
+    )
+
     report_text += f"📊 <b>Umumiy yetkazilgan Alukabond:</b> {total_str}\n\n"
     
     if alukabond_inventory:
