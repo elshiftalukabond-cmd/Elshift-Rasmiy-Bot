@@ -24,9 +24,9 @@ class EmployeeCols:
 class ClientCols:
     CID = 1
     NAME = 3
-    PHONE = 6
-    TG_ID = 8
-    TG_STATUS = 10
+    PHONE = 7
+    TG_ID = 9
+    TG_STATUS = 11
 
 class ObjectCols:
     OID = 2         
