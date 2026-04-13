@@ -12,8 +12,9 @@ from keyboards import (
     get_objects_reply_keyboard, get_object_action_reply_keyboard, 
     get_cancel_process_keyboard, get_confirm_delivery_keyboard,
     get_client_objects_reply_keyboard, get_client_object_action_reply_keyboard, KeyboardButton,
-    get_admin_main_menu
+    get_admin_main_menu, get_wake_more_keyboard
 )
+from models import TgUserStatus
 import logging
 
 logger = logging.getLogger(__name__)
@@ -113,12 +114,13 @@ async def handle_client_contact(message: Message, state: FSMContext):
         if NEW_CLIENT_INFO_MSG_ID:
             try:
                 await message.bot.copy_message(chat_id=telegram_id, from_chat_id=LOGIST_GROUP_ID, message_id=NEW_CLIENT_INFO_MSG_ID, reply_markup=get_main_public_menu())
-            except Exception:
+            except Exception as e:
+                logger.error(f"Yangi mijozga info yuborishda xato: {e}")
                 await message.answer("Sizning ma'lumotlaringiz bazadan topilmadi. Iltimos, operator bilan bog'laning.", reply_markup=get_main_public_menu())
         else:
             await message.answer("Sizning ma'lumotlaringiz bazadan topilmadi. Iltimos, operator bilan bog'laning.", reply_markup=get_main_public_menu())
 
-    elif client.tg_status.lower() == "tasdiqlandi":
+    elif client.tg_status.lower() == TgUserStatus.APPROVED:
         await state.clear()
         await state.update_data(user_role="client", client_cid=client.cid)
         
@@ -172,11 +174,11 @@ async def handle_logist_contact(message: Message, state: FSMContext):
     employee = await asyncio.to_thread(repo.auth_employee, phone, telegram_id, expected_role="logist")
     await status_msg.delete()
     
-    if employee.tg_status == "Topilmadi":
+    if employee.tg_status == TgUserStatus.NOT_FOUND:
         await message.answer("❌ Ma'lumotlaringiz topilmadi.", reply_markup=get_main_public_menu())
     elif employee.tg_status == "Lavozim Xato":
         await message.answer("⛔ Lavozimingiz 'Logist' emas.", reply_markup=get_main_public_menu())
-    elif employee.tg_status.lower() == "tasdiqlandi":
+    elif employee.tg_status.lower() == TgUserStatus.APPROVED:
         await state.clear()
         await state.update_data(user_role="logist", emp_id=employee.emp_id)
         await message.answer(f"✅ <b>Profilga kirdingiz!</b>\n\n👤 {employee.full_name}\n💼 {employee.lavozim}", parse_mode="HTML", reply_markup=get_logist_main_menu())
@@ -192,11 +194,11 @@ async def handle_admin_contact(message: Message, state: FSMContext):
     employee = await asyncio.to_thread(repo.auth_employee, phone, telegram_id, expected_role="admin")
     await status_msg.delete()
     
-    if employee.tg_status == "Topilmadi":
+    if employee.tg_status == TgUserStatus.NOT_FOUND:
         await message.answer("❌ Ma'lumotlaringiz topilmadi.", reply_markup=get_main_public_menu())
     elif employee.tg_status == "Lavozim Xato":
         await message.answer("⛔ Sizda Admin huquqi yo'q.", reply_markup=get_main_public_menu())
-    elif employee.tg_status.lower() == "tasdiqlandi":
+    elif employee.tg_status.lower() == TgUserStatus.APPROVED:
         await state.clear()
         await state.update_data(user_role="admin", emp_id=employee.emp_id)
         await message.answer(f"✅ <b>Admin profiliga kirdingiz!</b>\n\n👤 {employee.full_name}", parse_mode="HTML", reply_markup=get_admin_main_menu())
@@ -501,10 +503,6 @@ async def process_wake_report(message: Message, state: FSMContext):
     time_str = data.get("wake_time", "Noma'lum")
     name = data.get("wake_name", message.from_user.full_name)
     report_msg = message.text
-
-    await state.set_state(None)
-    
-    await message.answer("✅ Batafsil hisobotingiz qabul qilindi va adminga yuborildi. Rahmat!")
     
     admin_ids = await asyncio.to_thread(repo.get_all_admins_tg_ids)
     report_text = (
@@ -517,7 +515,26 @@ async def process_wake_report(message: Message, state: FSMContext):
     
     for adm in admin_ids:
         try: await message.bot.send_message(chat_id=adm, text=report_text, parse_mode="HTML")
-        except Exception: pass
+        except Exception as e: logger.error(f"Failed sending wake to admin: {e}")
+
+    await message.answer(
+        "✅ Batafsil hisobotingiz qabul qilindi va adminga yuborildi.\n\n"
+        "Yana boshqa ma'lumot (kirim/chiqim) kiritasizmi?", 
+        reply_markup=get_wake_more_keyboard()
+    )
+
+@router.callback_query(F.data == "wake_more_yes")
+async def wake_more_yes_handler(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.message.answer("✍️ <i>Iltimos, keyingi hisobotni yozib yuboring (Text shaklida):</i>", parse_mode="HTML")
+    await callback.answer()
+
+@router.callback_query(F.data == "wake_more_no")
+async def wake_more_no_handler(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(None)
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.message.answer("✅ Barcha hisobotlaringiz uchun rahmat!")
+    await callback.answer()
 
 @router.message()
 async def select_object_by_clean_reply(message: Message, state: FSMContext):

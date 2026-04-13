@@ -1,5 +1,12 @@
 from dataclasses import dataclass, field
 
+class TgUserStatus:
+    APPROVED = "tasdiqlandi"
+    PENDING = "kutmoqda"
+    REJECTED = "rad etildi"
+    NOT_FOUND = "topilmadi"
+    NEW = "yangi"
+
 @dataclass
 class EmployeeModel:
     emp_id: str

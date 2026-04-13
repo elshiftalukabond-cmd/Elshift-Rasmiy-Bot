@@ -2,11 +2,12 @@ import gspread
 import logging
 import json
 import os
+import time
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from google.oauth2.service_account import Credentials
 from config import GOOGLE_CREDENTIALS_JSON, SHEET_NAME
-from models import EmployeeModel, LogistProjectModel, ClientModel
+from models import EmployeeModel, LogistProjectModel, ClientModel, TgUserStatus
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +76,7 @@ class GoogleSheetsRepository:
             self.logist_data_ws = self.sheet.worksheet("LogistData")
             self.yangi_mijoz_ws = self.sheet.worksheet("YangiMijoz")
             
+            self._cache = {}
             logger.info("[REPO] Sheets bilan ulanish muvaffaqiyatli yakunlandi.")
         except Exception as e:
             logger.critical(f"[REPO XATOLIGI] Google Sheetsga ulanishda xatolik: {e}")
@@ -118,10 +120,10 @@ class GoogleSheetsRepository:
                         self.xodimlar_ws.update_cell(idx, EmployeeCols.PHONE + 1, raw_9_digit_phone)
                         needs_update = True
 
-                    if needs_update and tg_status.lower() != "rad etildi":
+                    if needs_update and tg_status.lower() != TgUserStatus.REJECTED:
                         self.xodimlar_ws.update_cell(idx, EmployeeCols.TG_STATUS + 1, "Kutmoqda")
                         tg_status = "Kutmoqda"
-                    elif tg_status.lower() in ["yangi", ""]:
+                    elif tg_status.lower() in [TgUserStatus.NEW, ""]:
                         self.xodimlar_ws.update_cell(idx, EmployeeCols.TG_STATUS + 1, "Kutmoqda")
                         tg_status = "Kutmoqda"
 
@@ -142,7 +144,7 @@ class GoogleSheetsRepository:
                 tg_id = row[EmployeeCols.TG_ID].strip()
                 status = row[EmployeeCols.TG_STATUS].strip().lower()
                 
-                if lavozim == "admin" and tg_id.isdigit() and status == "tasdiqlandi":
+                if lavozim == "admin" and tg_id.isdigit() and status == TgUserStatus.APPROVED:
                     admin_ids.append(int(tg_id))
         return admin_ids
 
@@ -161,7 +163,7 @@ class GoogleSheetsRepository:
                 tg_status = row[EmployeeCols.TG_STATUS].strip().lower()
                 wake_status = row[EmployeeCols.WAKE_STATUS].strip().lower()
                 
-                if tg_id.isdigit() and tg_status == "tasdiqlandi" and wake_status == "wake":
+                if tg_id.isdigit() and tg_status == TgUserStatus.APPROVED and wake_status == "wake":
                     wake_users.append({
                         "tg_id": int(tg_id),
                         "full_name": row[EmployeeCols.FULLNAME].strip()
@@ -194,10 +196,10 @@ class GoogleSheetsRepository:
                         self.mijozlar_ws.update_cell(idx, ClientCols.PHONE + 1, raw_9_digit_phone)
                         needs_update = True
 
-                    if needs_update and tg_status.lower() not in ["rad etildi", "tasdiqlandi"]:
+                    if needs_update and tg_status.lower() not in [TgUserStatus.REJECTED, TgUserStatus.APPROVED]:
                         self.mijozlar_ws.update_cell(idx, ClientCols.TG_STATUS + 1, "Kutmoqda")
                         tg_status = "Kutmoqda"
-                    elif tg_status.lower() in ["yangi", ""]:
+                    elif tg_status.lower() in [TgUserStatus.NEW, ""]:
                         self.mijozlar_ws.update_cell(idx, ClientCols.TG_STATUS + 1, "Kutmoqda")
                         tg_status = "Kutmoqda"
 
@@ -238,6 +240,10 @@ class GoogleSheetsRepository:
         return recent_clients
 
     def get_active_objects(self) -> List[LogistProjectModel]:
+        now = time.time()
+        if "active_objects" in self._cache and now - self._cache["active_objects"]["time"] < 60:
+            return self._cache["active_objects"]["data"]
+
         data = self.obyektlar_ws.get_all_values()
         active_projects = {}
         for row in data[3:]:
@@ -247,9 +253,16 @@ class GoogleSheetsRepository:
                     mijoz_raw = row[ObjectCols.MIJOZ].strip()
                     client_name = mijoz_raw.split("|")[-1].strip() if "|" in mijoz_raw else mijoz_raw
                     active_projects[oid] = LogistProjectModel(oid, row[ObjectCols.NOMI].strip(), client_name, status)
+        
+        self._cache["active_objects"] = {"time": now, "data": list(active_projects.values())}
         return list(active_projects.values())
 
     def get_client_objects(self, cid: str) -> List[LogistProjectModel]:
+        now = time.time()
+        cache_key = f"client_objects_{cid}"
+        if cache_key in self._cache and now - self._cache[cache_key]["time"] < 60:
+            return self._cache[cache_key]["data"]
+
         data = self.obyektlar_ws.get_all_values()
         client_projects = []
         for row in data[3:]:
@@ -265,6 +278,8 @@ class GoogleSheetsRepository:
                             oid=oid, name=row[ObjectCols.NOMI].strip(), client_name=client_name, status=status, cid=row_cid
                         )
                     )
+        
+        self._cache[cache_key] = {"time": now, "data": client_projects}
         return client_projects
     
     def get_object_by_oid(self, oid: str) -> Optional[LogistProjectModel]:

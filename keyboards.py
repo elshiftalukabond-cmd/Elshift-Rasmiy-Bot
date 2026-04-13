@@ -94,3 +94,13 @@ def get_wake_confirm_keyboard(time_str: str) -> InlineKeyboardMarkup:
             ]
         ]
     )
+
+def get_wake_more_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="➕ Yana qo'shish", callback_data="wake_more_yes"),
+                InlineKeyboardButton(text="✅ Yakunlash", callback_data="wake_more_no")
+            ]
+        ]
+    )
