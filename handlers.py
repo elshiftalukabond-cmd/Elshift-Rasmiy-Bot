@@ -419,44 +419,41 @@ async def client_object_report(message: Message, state: FSMContext):
     if not project:
         return await message.answer("❌ Obyekt ma'lumotlari topilmadi.")
 
-    if project.ustalar:
-        ustalar_str = "\n" + "\n".join([f"  ▫️ {u}" for u in project.ustalar])
-    else:
-        ustalar_str = " Kiritilmagan"
-
-    report_text = (
-        f"🏢 <b>Nomi:</b> {project.name}\n"
-        f"👤 <b>Mijoz:</b> {project.client_name}\n"
-        f"📍 <b>Hudud:</b> {project.hudud}\n"
-        f"📅 <b>Boshlanish sanasi:</b> {project.start_date}\n"
-        f"📊 <b>Status:</b> {project.status}\n\n"
-        f"💰 <b>Summa:</b> {project.format_money(project.yakuniy_summa)}\n"
-        f"💵 <b>To'landi:</b> {project.format_money(project.tolandi)}\n"
-        f"📉 <b>Qarzdorlik:</b> {project.format_money(project.qarzdorlik)}\n\n"
-        f"👷‍♂️ <b>Brigadir:</b> {project.brigadir}\n"
-        f"🛠 <b>Ustalar:</b>{ustalar_str}\n\n"
-        f"<i>📦 Obyektga yetkazilgan jami mahsulotlar balansi:</i>"
-    )
-    await message.answer(report_text, parse_mode="HTML")
-
+    alukabond_inventory = {}
+    total_soni = 0.0
+    total_kvm = 0.0
+    
     if inventory:
-        inv_text = ""
-        count = 1
         for mahsulot, hajmlar in inventory.items():
-            if round(hajmlar['soni'], 2) > 0 or round(hajmlar['kvm'], 2) > 0:
-                soni_str = f"{hajmlar['soni']:g} dona" if hajmlar['soni'] > 0 else ""
-                kvm_str = f"{hajmlar['kvm']:g} kv.m" if hajmlar['kvm'] > 0 else ""
-                
-                hajm_info = " / ".join(filter(None, [soni_str, kvm_str]))
-                inv_text += f"<b>{count}. {mahsulot}</b> — <i>{hajm_info}</i>\n"
-                count += 1
-        
-        if count == 1:
-            inv_text += "Hozirda yetkazilgan mahsulotlar hajmi mavjud emas."
+            turi = hajmlar.get('turi', '').lower()
+            m_lower = mahsulot.lower()
+            if 'aluk' in turi or 'alyuk' in turi or 'aluk' in m_lower or 'alyuk' in m_lower or 'bond' in m_lower:
+                if round(hajmlar['soni'], 2) > 0 or round(hajmlar['kvm'], 2) > 0:
+                    alukabond_inventory[mahsulot] = hajmlar
+                    total_soni += hajmlar['soni']
+                    total_kvm += hajmlar['kvm']
+    
+    total_soni_str = f"{total_soni:g} dona" if total_soni > 0 else ""
+    total_kvm_str = f"{total_kvm:g} kv.m" if total_kvm > 0 else ""
+    total_str = " / ".join(filter(None, [total_soni_str, total_kvm_str])) or "0 dona"
+
+    report_text = f"🏢 <b>Obyekt:</b> {project.name}\n"
+    report_text += f"📊 <b>Umumiy yetkazilgan Alukabond:</b> {total_str}\n\n"
+    
+    if alukabond_inventory:
+        report_text += f"<b>Turlari bo'yicha:</b>\n"
+        count = 1
+        for mahsulot, hajmlar in alukabond_inventory.items():
+            s_str = f"{hajmlar['soni']:g} dona" if hajmlar['soni'] > 0 else ""
+            k_str = f"{hajmlar['kvm']:g} kv.m" if hajmlar['kvm'] > 0 else ""
+            h_info = " / ".join(filter(None, [s_str, k_str]))
             
-        await message.answer(inv_text, parse_mode="HTML", reply_markup=get_client_object_action_reply_keyboard())
+            report_text += f"<b>{count}.</b> {mahsulot} — <i>{h_info}</i>\n"
+            count += 1
     else:
-        await message.answer("Hozirda obyektga yetkazilgan mahsulotlar bo'yicha ma'lumot yo'q.", reply_markup=get_client_object_action_reply_keyboard())
+        report_text += "Hozirda obyektga alukabond yetkazilmagan."
+
+    await message.answer(report_text, parse_mode="HTML", reply_markup=get_client_object_action_reply_keyboard())
 
 
 @router.callback_query(F.data.startswith("wake_"))

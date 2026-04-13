@@ -349,7 +349,11 @@ class GoogleSheetsRepository:
                         soni, kvm = -soni, -kvm
                         
                     if mahsulot not in inventory:
-                        inventory[mahsulot] = {'soni': 0.0, 'kvm': 0.0}
+                        inventory[mahsulot] = {
+                            'soni': 0.0, 
+                            'kvm': 0.0, 
+                            'turi': row[ChiqimCols.TURI].strip() if len(row) > ChiqimCols.TURI else ""
+                        }
                         
                     inventory[mahsulot]['soni'] += soni
                     inventory[mahsulot]['kvm'] += kvm
