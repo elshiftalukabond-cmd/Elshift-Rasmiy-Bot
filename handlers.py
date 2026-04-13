@@ -390,7 +390,16 @@ async def show_previous_deliveries(message: Message, state: FSMContext):
             await asyncio.sleep(0.5)
             
     if role == "logist" and inventory:
-        summary_text = f"📊 <b>MAHSULOTLAR BALANSI:</b>\n\n"
+        total_soni = sum(h['soni'] for h in inventory.values() if h['soni'] > 0)
+        total_kvm = sum(h['kvm'] for h in inventory.values() if h['kvm'] > 0)
+        
+        tot_s_str = f"{total_soni:g} dona" if total_soni > 0 else ""
+        tot_k_str = f"{total_kvm:g} kv.m" if total_kvm > 0 else ""
+        total_str = " / ".join(filter(None, [tot_s_str, tot_k_str])) or "0"
+        
+        summary_text = f"📊 <b>MAHSULOTLAR BALANSI:</b>\n"
+        summary_text += f"📦 Jami yetkazilgan hajmi: <b>{total_str}</b>\n\n"
+        
         count = 1
         for mahsulot, hajmlar in inventory.items():
             if round(hajmlar['soni'], 2) > 0 or round(hajmlar['kvm'], 2) > 0:
