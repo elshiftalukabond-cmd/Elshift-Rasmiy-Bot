@@ -392,21 +392,24 @@ async def show_previous_deliveries(message: Message, state: FSMContext):
     if role == "logist" and inventory:
         aluk_soni = 0.0
         aluk_kvm = 0.0
-        boshqa_soni = 0.0
-        boshqa_kvm = 0.0
+        turi_totallar = {}
         
         for m, h in inventory.items():
-            turi = h.get('turi', '').lower()
+            turi = h.get('turi', '').strip()
             m_lower = m.lower()
             s = h['soni'] if h['soni'] > 0 else 0
             k = h['kvm'] if h['kvm'] > 0 else 0
             
-            if 'aluk' in turi or 'alyuk' in turi or 'aluk' in m_lower or 'alyuk' in m_lower or 'bond' in m_lower:
+            if 'aluk' in turi.lower() or 'alyuk' in turi.lower() or 'aluk' in m_lower or 'alyuk' in m_lower or 'bond' in m_lower:
+                h['is_aluk'] = True
                 aluk_soni += s
                 aluk_kvm += k
             else:
-                boshqa_soni += s
-                boshqa_kvm += k
+                h['is_aluk'] = False
+                t_key = turi if turi else "Dona"
+                if t_key not in turi_totallar:
+                    turi_totallar[t_key] = 0.0
+                turi_totallar[t_key] += s
 
         def fmt_total(s, k):
             s_str = f"{s:g} dona" if s > 0 else ""
@@ -416,16 +419,25 @@ async def show_previous_deliveries(message: Message, state: FSMContext):
         summary_text = f"📊 <b>MAHSULOTLAR BALANSI:</b>\n"
         if aluk_soni > 0 or aluk_kvm > 0:
             summary_text += f"🟦 <b>Jami Alukabondlar:</b> {fmt_total(aluk_soni, aluk_kvm)}\n"
-        if boshqa_soni > 0 or boshqa_kvm > 0:
-            summary_text += f"🟨 <b>Jami boshqalar:</b> {fmt_total(boshqa_soni, boshqa_kvm)}\n"
+        
+        for t_name, amount in turi_totallar.items():
+            if amount > 0:
+                summary_text += f"🟨 <b>Jami {t_name.capitalize()}:</b> {amount:g} {t_name.lower()}\n"
         summary_text += "\n"
         
         count = 1
-        for mahsulot, hajmlar in inventory.items():
-            if round(hajmlar['soni'], 2) > 0 or round(hajmlar['kvm'], 2) > 0:
-                s_str = f"{hajmlar['soni']:g} dona" if hajmlar['soni'] > 0 else ""
-                k_str = f"{hajmlar['kvm']:g} kv.m" if hajmlar['kvm'] > 0 else ""
-                summary_text += f"<b>{count}. {mahsulot}</b> — <i>{' / '.join(filter(None, [s_str, k_str]))}</i>\n"
+        for mahsulot, h in inventory.items():
+            if round(h['soni'], 2) > 0 or round(h['kvm'], 2) > 0:
+                if h.get('is_aluk'):
+                    info = fmt_total(h['soni'], h['kvm'])
+                else:
+                    t_unit = h.get('turi', '').strip().lower()
+                    if not t_unit: t_unit = "dona"
+                    info = f"{h['soni']:g} {t_unit}"
+                    if round(h['kvm'], 2) > 0:
+                        info += f" / {h['kvm']:g} kv.m"
+                        
+                summary_text += f"<b>{count}. {mahsulot}</b> — <i>{info}</i>\n"
                 count += 1
         if count == 1: summary_text += "Barcha mahsulotlar nolga teng."
         await message.answer(summary_text, parse_mode="HTML")
