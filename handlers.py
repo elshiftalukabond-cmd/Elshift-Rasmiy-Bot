@@ -1,5 +1,6 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+UZB_TZ = timezone(timedelta(hours=5))
 from config import LOGIST_GROUP_ID, ABOUT_US_MSG_ID, CONTACT_MSG_ID, NEW_CLIENT_INFO_MSG_ID
 from aiogram import Router, F
 from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery, ReplyKeyboardMarkup
@@ -44,7 +45,7 @@ async def cmd_public_start(message: Message, state: FSMContext):
 @router.message(Command("eslatma"))
 async def cmd_ext_wake_test(message: Message):
     from keyboards import get_wake_confirm_keyboard
-    now_time = datetime.now().strftime("%H:%M")
+    now_time = datetime.now(UZB_TZ).strftime("%H:%M")
     name = message.from_user.full_name
     kb = get_wake_confirm_keyboard(now_time)
     
@@ -102,7 +103,7 @@ async def handle_client_contact(message: Message, state: FSMContext):
     if client.tg_status == "Topilmadi":
         full_name = message.from_user.full_name
         username = message.from_user.username or "yo'q"
-        now_str = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+        now_str = datetime.now(UZB_TZ).strftime("%d.%m.%Y %H:%M:%S")
         
         await asyncio.to_thread(repo.save_new_client_attempt, str(telegram_id), clean_phone_9, full_name, username, now_str)
         
@@ -337,7 +338,7 @@ async def confirm_delivery_handler(callback: CallbackQuery, state: FSMContext):
         await asyncio.to_thread(
             repo.save_delivery_data, emp_id, str(callback.from_user.id), data.get("current_cid", ""), 
             data.get("current_oid", ""), delivery_text, str(msg_photo.message_id), 
-            str(msg_vid.message_id), datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+            str(msg_vid.message_id), datetime.now(UZB_TZ).strftime("%d.%m.%Y %H:%M:%S")
         )
         await msg.edit_text("✅ Muvaffaqiyatli saqlandi!")
     except Exception as e:

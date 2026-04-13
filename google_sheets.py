@@ -219,7 +219,9 @@ class GoogleSheetsRepository:
             return []
             
         recent_clients = []
-        two_days_ago = datetime.now() - timedelta(days=2)
+        from datetime import timezone
+        now_tashkent = datetime.now(timezone(timedelta(hours=5))).replace(tzinfo=None)
+        two_days_ago = now_tashkent - timedelta(days=2)
         
         for row in data[1:]: 
             if len(row) >= 5:
