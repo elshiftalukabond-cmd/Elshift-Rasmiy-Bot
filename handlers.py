@@ -41,6 +41,17 @@ async def cmd_public_start(message: Message, state: FSMContext):
         parse_mode="HTML", reply_markup=get_main_public_menu()
     )
 
+@router.message(Command("eslatma"))
+async def cmd_ext_wake_test(message: Message):
+    from keyboards import get_wake_confirm_keyboard
+    now_time = datetime.now().strftime("%H:%M")
+    name = message.from_user.full_name
+    kb = get_wake_confirm_keyboard(now_time)
+    
+    text = f"🔔 <b>SO'ROVNOMA! (TEST)</b>\n\nHurmatli <b>{name}</b>,\nHozirgi ({now_time}) holatiga ko'ra, siz mas'ul bo'lgan obyektlarda <b>Kirim</b> yoki <b>Chiqim</b> mavjudmi?"
+    
+    await message.answer(text, parse_mode="HTML", reply_markup=kb)
+
 @router.message(F.text == "ℹ️ Biz haqimizda")
 async def about_us_handler(message: Message):
     if ABOUT_US_MSG_ID:

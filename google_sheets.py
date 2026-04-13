@@ -39,7 +39,7 @@ class ObjectCols:
     HUDUD = 20      
     YAKUNIY = 21    
     TOLANDI = 22    
-    QARZ = 23
+    QARZ = 24
     USTA_OID = 30   
     USTA_NOMI = 32  
 
